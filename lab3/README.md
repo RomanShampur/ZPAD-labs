@@ -14,8 +14,13 @@ Has Missing Values: Yes
 
 для запуску
 
+python 3.13.1
+
+pip install -r requirements.txt
+
 git clone [https://github.com/RomanShampur/ZPAD-labs/edit/lab3/lab3](https://github.com/RomanShampur/ZPAD-labs/blob/lab3/lab3/lab3_analyse.ipynb)
 cd /lab3/
-pip install pandas numpy seaborn matplotlib ipykernel
 
-якшо запускаєте через VS ode треба встановити jyputer розширення, якшо в браузері просто відрити jyputer notebook,
+
+якшо запускаєте через VS ode треба встановити jyputer розширення, якшо в браузері просто відрити jyputer notebook
+
