@@ -1,4 +1,13 @@
-.ipynb_checkpoints/
-*.log
 __pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
 .env
+.vscode/
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.png
+*.pdf
+.DS_Store
+Thumbs.db
