@@ -1,115 +1,111 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
-# налаштування сторінки (робимо її широкою)
-st.set_page_config(layout="wide")
+# Налаштування сторінки
+st.set_page_config(layout="wide", page_title="Аналіз VHI Даних")
 
-# завантаження даних (заміни 'data.csv' на свій файл з лаби 2)
+# --- ЗАВАНТАЖЕННЯ ДАНИХ ---
 @st.cache_data
 def load_data():
-    # тут має бути твій шлях до файлу
-    df = pd.read_csv('vhi_data.csv') 
+    # Завантажуємо твій файл
+    # Переконайся, що файл лежить в тій же папці, що і цей скрипт
+    df = pd.read_csv('final_vhi_data.csv')
+    
+    # Видаляємо зайві пробіли в назвах колонок, якщо вони є
+    df.columns = df.columns.str.strip()
     return df
 
-df = load_data()
+try:
+    df_raw = load_data()
+except FileNotFoundError:
+    st.error("Файл 'final_vhi_data.csv' не знайдено! Поклади його в папку з кодом.")
+    st.stop()
 
-# мапа областей (приклад, додай свої або витягни з df)
-provinces = {
-    1: "Вінницька", 2: "Волинська", 3: "Дніпропетровська", 4: "Донецька", 5: "Житомирська",
-    # ... додай решту
-}
+# --- ЛОГІКА СКИДАННЯ ФІЛЬТРІВ ---
+def reset_filters():
+    st.session_state.year_range = (int(df_raw['Year'].min()), int(df_raw['Year'].max()))
+    st.session_state.week_range = (1, 52)
+    st.session_state.region = df_raw['Province_Name'].unique()[0]
+    st.session_state.index_type = 'VHI'
+    st.session_state.sort_asc = False
+    st.session_state.sort_desc = False
 
-# заголовок додатка
-st.title("Аналіз індексів VCI, TCI, VHI по областях України")
+# Ініціалізація стану, якщо треба
+if 'year_range' not in st.session_state:
+    reset_filters()
 
-# створення двох колонок: ліва для фільтрів, права для графіків
+# --- ІНТЕРФЕЙС (COLUMNS) ---
 col1, col2 = st.columns([1, 3])
 
 with col1:
-    st.header("Налаштування фільтрів")
+    st.header("Налаштування")
     
-    # функція для скидання (використовуємо session_state)
-    if st.button("Скинути всі фільтри"):
-        st.rerun()
-
-    # 1. dropdown для вибору індексу
-    index_choice = st.selectbox("Оберіть часовий ряд:", ["VCI", "TCI", "VHI"])
+    # 1. Dropdown для вибору індексу
+    index_choice = st.selectbox("Оберіть показник", ['VCI', 'TCI', 'VHI'], key='index_type')
     
-    # 2. dropdown для вибору області
-    province_id = st.selectbox("Оберіть область:", options=list(provinces.keys()), 
-                               format_func=lambda x: provinces[x])
+    # 2. Dropdown для вибору області
+    region_choice = st.selectbox("Оберіть область", df_raw['Province_Name'].unique(), key='region')
     
-    # 3. slider для інтервалу тижнів
-    week_range = st.slider("Інтервал тижнів:", 1, 52, (1, 52))
+    # 3. Slider для років (автоматично від мін до макс у файлі)
+    min_year = int(df_raw['Year'].min())
+    max_year = int(df_raw['Year'].max())
+    year_range = st.slider("Інтервал років", min_year, max_year, key='year_range')
     
-    # 4. slider для інтервалу років
-    min_year = int(df['Year'].min())
-    max_year = int(df['Year'].max())
-    year_range = st.slider("Інтервал років:", min_year, max_year, (min_year, max_year))
-
-    # чекбокси для сортування
-    st.subheader("Сортування таблиці")
-    sort_asc = st.checkbox("За зростанням")
-    sort_desc = st.checkbox("За спаданням")
-
-    # логіка реакції на два увімкнені чекбокси
+    # 4. Slider для тижнів
+    week_range = st.slider("Інтервал тижнів", 1, 52, key='week_range')
+    
+    # 5. Checkboxes для сортування
+    st.subheader("Сортування")
+    c1, c2 = st.columns(2)
+    with c1:
+        sort_asc = st.checkbox("Зростання", key='sort_asc')
+    with c2:
+        sort_desc = st.checkbox("Спадання", key='sort_desc')
+    
     if sort_asc and sort_desc:
-        st.warning("Обрано обидва типи сортування. Буде застосовано сортування за зростанням.")
+        st.warning("⚠️ Оберіть щось одне")
 
-# фільтрація даних
-filtered_df = df[
-    (df['Province_ID'] == province_id) &
-    (df['Year'].between(year_range[0], year_range[1])) &
-    (df['Week'].between(week_range[0], week_range[1]))
+    # 6. Button для скидання
+    st.button("Скинути фільтри", on_click=reset_filters)
+
+# --- ФІЛЬТРАЦІЯ ---
+df_filtered = df_raw[
+    (df_raw['Province_Name'] == region_choice) &
+    (df_raw['Year'] >= year_range[0]) & (df_raw['Year'] <= year_range[1]) &
+    (df_raw['Week'] >= week_range[0]) & (df_raw['Week'] <= week_range[1])
 ]
 
-# логіка сортування
-if sort_asc:
-    filtered_df = filtered_df.sort_values(by=index_choice, ascending=True)
-elif sort_desc:
-    filtered_df = filtered_df.sort_values(by=index_choice, ascending=False)
+# Обробка сортування
+if sort_asc and not sort_desc:
+    df_filtered = df_filtered.sort_values(by=index_choice, ascending=True)
+elif sort_desc and not sort_asc:
+    df_filtered = df_filtered.sort_values(by=index_choice, ascending=False)
 
+# --- ВІДОБРАЖЕННЯ (TABS) ---
 with col2:
-    # створення вкладок
-    tab_table, tab_plot, tab_compare = st.tabs(["📊 Таблиця даних", "📈 Графік", "🌍 Порівняння областей"])
-
-    with tab_table:
-        st.subheader(f"Дані для області: {provinces[province_id]}")
-        st.dataframe(filtered_df, use_container_width=True)
-
-    with tab_plot:
-        st.subheader(f"Динаміка {index_choice}")
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(filtered_df['Year'].astype(str) + "-" + filtered_df['Week'].astype(str), 
-                filtered_df[index_choice], marker='o', linestyle='-', color='purple')
-        ax.set_xlabel("Час (Рік-Тиждень)")
-        ax.set_ylabel(index_choice)
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
-    with tab_compare:
+    tab1, tab2, tab3 = st.tabs(["Таблиця", "Часовий ряд", "Порівняння областей"])
+    
+    with tab1:
+        st.dataframe(df_filtered, use_container_width=True)
+    
+    with tab2:
+        st.subheader(f"Графік {index_choice} для області {region_choice}")
+        # Створюємо графік (X - це комбінація року та тижня для лінійності)
+        fig1 = px.line(df_filtered, x='Year', y=index_choice, color='Week',
+                       markers=True, title=f"Динаміка {index_choice} по тижнях")
+        st.plotly_chart(fig1, use_container_width=True)
+        
+    with tab3:
         st.subheader(f"Порівняння {index_choice} з іншими областями")
-        
-        # дані для порівняння (всі області за той самий період)
-        compare_df = df[
-            (df['Year'].between(year_range[0], year_range[1])) &
-            (df['Week'].between(week_range[0], week_range[1]))
+        # Фільтруємо дані для всіх областей за той самий період
+        df_all_regions = df_raw[
+            (df_raw['Year'] >= year_range[0]) & (df_raw['Year'] <= year_range[1]) &
+            (df_raw['Week'] >= week_range[0]) & (df_raw['Week'] <= week_range[1])
         ]
+        # Рахуємо середнє значення для кожної області для порівняння
+        df_compare = df_all_regions.groupby('Province_Name')[index_choice].mean().reset_index()
         
-        # групуємо по роках для наочності порівняння
-        pivot_df = compare_df.groupby(['Year', 'Province_ID'])[index_choice].mean().unstack()
-        
-        fig2, ax2 = plt.subplots(figsize=(10, 5))
-        # малюємо обрану область жирною лінією
-        ax2.plot(pivot_df.index, pivot_df[province_id], label=f"{provinces[province_id]} (Обрана)", 
-                 linewidth=4, color='red', marker='s')
-        
-        # малюємо інші області тонкими лініями
-        for col in pivot_df.columns:
-            if col != province_id:
-                ax2.plot(pivot_df.index, pivot_df[col], alpha=0.3, label=provinces.get(col, f"ID {col}"))
-        
-        ax2.set_title(f"Середній {index_choice} по роках")
-        ax2.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small', ncol=2)
-        st.pyplot(fig2)
+        fig2 = px.bar(df_compare, x='Province_Name', y=index_choice, 
+                      color='Province_Name', title=f"Середній {index_choice} за обраний період")
+        st.plotly_chart(fig2, use_container_width=True)
