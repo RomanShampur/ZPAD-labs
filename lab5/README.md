@@ -8,4 +8,4 @@
 Інтерактивні елементи мають бути розміщений в одній колонці, а графіки з  таблицею — в іншій.
 
 для запуску даної програми необхідно python 3.13.1 встановити залежності pip install -r requirements.txt
-git clone https://github.com/RomanShampur/ZPAD-labs/tree/lab4/lab4 cd /lab4/
+git clone https://github.com/RomanShampur/ZPAD-labs/tree/lab5/lab5 cd /lab5/
