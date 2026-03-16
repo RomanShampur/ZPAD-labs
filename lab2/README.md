@@ -29,3 +29,6 @@ git clone https://github.com/RomanShampur/ZPAD-labs/tree/lab2/lab2 cd /lab2/
 Пронормувати та стандартизувати вибраний датасет
 Підрахувати коефіцієнт Пірсона та Спірмена для двох integer/real атрибутів.
 Провести One Hot Encoding категоріального атрибута.
+для запуску даної програми необхідно python 3.13.1 встановити залежності pip install -r requirements.txt
+
+git clone https://github.com/RomanShampur/ZPAD-labs/tree/lab2/lab2 cd /lab2/
